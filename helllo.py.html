@@ -1,0 +1,100 @@
+'<span class="text-[10px] text-gray-400">' + escapeHTML(time) + '</span>' +
+            '</div>' +
+            '<h3 class="text-xs font-bold text-gray-800 leading-relaxed">' + titleHtml + '</h3>' +
+          '</div>' +
+        '</div>';
+      });
+
+      listContainer.innerHTML = htmlContent;
+    }
+
+    // حماية النصوص
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, function(char) {
+        const entities = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        };
+        return entities[char];
+      });
+    }
+
+    // التحقق من رابط الخبر
+    function safeURL(value) {
+      try {
+        const url = new URL(value);
+        if (url.protocol === 'https:' || url.protocol === 'http:') {
+          return url.href;
+        }
+      } catch (error) {
+        return '';
+      }
+      return '';
+    }
+
+    // جلب الأخبار
+    async function fetchNews() {
+      listContainer.innerHTML = '<div class="py-12 text-center text-gray-400"><p class="text-xs font-semibold">جاري تحميل الأخبار والصور...</p></div>';
+      refreshButton.disabled = true;
+
+      try {
+        const response = await fetch(NEWS_RSS);
+        if (!response.ok) {
+          throw new Error('فشل الاتصال بمصدر الأخبار');
+        }
+
+        const data = await response.json();
+        if (data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
+          allNews = data.items;
+          displayNews(allNews);
+        } else {
+          throw new Error('لا توجد أخبار متاحة حالياً');
+        }
+      } catch (error) {
+        console.error('خطأ في جلب الأخبار:', error);
+        listContainer.innerHTML = '<div class="text-center py-10 px-4">' +
+          '<p class="text-sm font-bold text-red-500 mb-2">تعذر تحميل الأخبار</p>' +
+          '<p class="text-xs text-gray-500 mb-4">تأكدي من اتصالك بالإنترنت وحاولي مرة أخرى.</p>' +
+          '<button onclick="fetchNews()" class="bg-blue-600 text-white text-xs px-5 py-2 rounded-xl">إعادة المحاولة</button>' +
+        '</div>';
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    // البحث عن الأخبار
+    function searchNews() {
+      const searchText = searchInput.value.trim().toLowerCase();
+      if (!searchText) {
+        displayNews(allNews);
+        return;
+      }
+
+      const filteredNews = allNews.filter(function(item) {
+        const title = (item.title || '').toLowerCase();
+        return title.includes(searchText);
+      });
+
+      displayNews(filteredNews);
+    }
+
+    // أحداث البحث والتحديث
+    searchButton.addEventListener('click', searchNews);
+    searchInput.addEventListener('input', searchNews);
+    searchInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        searchNews();
+      }
+    });
+
+    refreshButton.addEventListener('click', fetchNews);
+
+    // تشغيل التطبيق
+    document.addEventListener('DOMContentLoaded', fetchNews);
+  </script>
+
+</body>
+</html>
